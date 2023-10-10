@@ -32,39 +32,33 @@ typedef struct Header{
 		this->link = link;
 		this->last = last;
 	}
-	//== Operator (we need it so we can use std::find())
-	bool operator==(const Header &cpyobj){
-		if((size == cpyobj.size) && (link == cpyobj.link) && (last == cpyobj.last))
-			return true;
-		return false;
-	}
 }Header;
 
 class DisjointSet{
 private:
-	std::vector<Header> Sets;
-	std::unordered_map<int,Node *> RepresentativeTable;
+	std::vector<Header *> Sets;
+	std::unordered_map<int,int> RepresentativeTable;
 
 public:
 
 	void MakeSet(int data);
-	Node* Find(int key);
-	void ChangeRepresentatives(Header* head,Node* rep);
+	int Find(int key);
+	void ChangeRepresentatives(Header* head,int rep);
 	void Union(int key1,int key2);
 	void Display();
 };
 
 void DisjointSet::MakeSet(int data){
 	Node *temp = new Node(data,nullptr);
-	Sets.push_back(Header(1,temp,temp));
-	RepresentativeTable[data] = temp;
+	Sets.push_back(new Header(1,temp,temp));
+	RepresentativeTable[data] = data;
 }
 
-inline Node* DisjointSet::Find(int key){
-	return RepresentativeTable[key];//return a pointer to the respective representative of the given element
+inline int DisjointSet::Find(int key){
+	return RepresentativeTable[key];
 }
 
-void DisjointSet::ChangeRepresentatives(Header* head,Node* rep){
+void DisjointSet::ChangeRepresentatives(Header* head,int rep){
 	Node* ptr=head->link;
 	while( ptr != nullptr){
 		RepresentativeTable[ptr->data] = rep;
@@ -73,38 +67,39 @@ void DisjointSet::ChangeRepresentatives(Header* head,Node* rep){
 }
 
 void DisjointSet::Union(int key1,int key2){
-	Header *A,*B;
-	std::vector<Header>::iterator it_A,it_B;//I kinda messed up and got into iterator hell
-	auto it = Sets.begin();			//if you dont understand whats happening , basically just using it to remember the current iterator so that i can use a range based for loop
-	for(Header H: Sets){			//im doing this so that i can pass the iterator of B to std::erase without finding it (which caused some weird double free errors)
-		if(H.link->data == RepresentativeTable[key1]->data){
-			A = &H;
+	int rep_A=Find(key1),rep_B=Find(key2);
+	Header* A=nullptr;
+	Header* B=nullptr;
+	auto it_A=Sets.begin(),it_B=Sets.begin();
+	for(auto it = Sets.begin() ; it != Sets.end() ; it++){
+		if((*it)->link->data == rep_A){
+			A=*it;
 			it_A=it;
 		}
-		else if(H.link->data == RepresentativeTable[key2]->data){
-			B = &H;
+		else if((*it)->link->data == rep_B){
+			B=*it;
 			it_B=it;
 		}
-		it++;
 	}
-/*	if(A->size >= B->size){
+	if(A->size > B->size){
 		std::swap(A,B);
 		std::swap(it_A,it_B);
-	}*/
-	this->ChangeRepresentatives(B,A->link);
+		std::swap(rep_A,rep_B);
+	}
+	ChangeRepresentatives(B,rep_A);
 	A->last->link = B->link;
 	A->last = B->last;
-std::cout<<"-------------------------------------------------------------------->size : "<<A->size<<B->size<<std::endl;
 	A->size += B->size;
 	Sets.erase(it_B);
+	delete B;
 }
 
 void DisjointSet::Display(){
-	for(Header H : Sets){
+	for(Header* H : Sets){
 		std::cout<<"---------------"<<std::endl;
-		std::cout<<"Set size : "<<H.size<<std::endl;
-		std::cout<<"Set Representative : "<<H.link->data<<std::endl;
-		Node* temp = H.link;
+		std::cout<<"Set size : "<<H->size<<std::endl;
+		std::cout<<"Set Representative : "<<H->link->data<<std::endl;
+		Node* temp = H->link;
 		while(temp != nullptr){
 			std::cout<<temp->data<<" ";
 			temp=temp->link;
